@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledger — Budget Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14231C;
+    --paper:#F1EAD9;
+    --paper-dim:#E7DEC9;
+    --ink:#1D2A22;
+    --ink-soft:#4B5A4F;
+    --brass:#B4884A;
+    --brass-soft:#D9BD8B;
+    --income:#3E7C63;
+    --expense:#B5493A;
+    --line:rgba(29,42,34,0.16);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.serif{font-family:'Source Serif 4',Georgia,serif;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+
+  /* ---------- Login ---------- */
+  #login-view{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .passbook{
+    width:100%;
+    max-width:380px;
+    background:var(--paper);
+    border-radius:4px;
+    padding:44px 36px 36px;
+    position:relative;
+    box-shadow:0 30px 60px rgba(0,0,0,0.35);
+  }
+  .passbook::before{
+    content:"";
+    position:absolute;
+    top:0; left:28px; right:28px; height:6px;
+    background:var(--brass);
+    border-radius:0 0 3px 3px;
+  }
+  .passbook h1{
+    margin:8px 0 2px;
+    font-size:28px;
+    font-weight:600;
+    letter-spacing:0.2px;
+  }
+  .passbook p.tag{
+    margin:0 0 30px;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:3px;
+    font-size:15px;
+    color:var(--ink);
+  }
+  .field input:focus{
+    outline:2px solid var(--brass);
+    outline-offset:1px;
+  }
+  .primary-btn{
+    width:100%;
+    padding:12px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:3px;
+    font-size:15px;
+    font-weight:500;
+    margin-top:6px;
+  }
+  .primary-btn:hover{background:#0F1912;}
+  #login-error{
+    color:var(--expense);
+    font-size:13px;
+    margin-top:14px;
+    min-height:16px;
+  }
+  .passbook .note{
+    margin-top:26px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+
+  /* ---------- Dashboard ---------- */
+  #app-view{display:none; min-height:100vh;}
+  .topbar{
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:20px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .topbar h1{
+    font-size:22px;
+    margin:0;
+    font-weight:600;
+  }
+  .topbar .who{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .signout{
+    background:none;
+    border:1px solid var(--line);
+    padding:8px 16px;
+    border-radius:3px;
+    font-size:13px;
+    color:var(--ink);
+  }
+  .signout:hover{border-color:var(--ink);}
+
+  .wrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:32px 24px 80px;
+  }
+  .totals{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin-bottom:32px;
+  }
+  .total-card{
+    background:var(--paper);
+    border-radius:4px;
+    padding:18px 20px;
+  }
+  .total-card .label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .total-card .amount{
+    font-family:'Source Serif 4',serif;
+    font-size:26px;
+    font-weight:600;
+  }
+  .total-card.balance .amount{color:var(--ink);}
+  .total-card.income .amount{color:var(--income);}
+  .total-card.expense .amount{color:var(--expense);}
+
+  .entry-form{
+    background:var(--paper);
+    border-radius:4px;
+    padding:20px;
+    margin-bottom:28px;
+  }
+  .entry-form h2{
+    font-size:15px;
+    margin:0 0 16px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
+  .form-row{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 1.4fr auto;
+    gap:10px;
+    align-items:end;
+  }
+  .form-row .field{margin-bottom:0;}
+  .toggle-type{
+    display:flex;
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .toggle-type button{
+    flex:1;
+    padding:11px 8px;
+    border:none;
+    background:#fff;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .toggle-type button.active[data-type="income"]{background:var(--income);color:#fff;}
+  .toggle-type button.active[data-type="expense"]{background:var(--expense);color:#fff;}
+  .add-btn{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:11px 20px;
+    border-radius:3px;
+    font-size:14px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .add-btn:hover{background:#0F1912;}
+
+  .ledger{
+    background:var(--paper);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .ledger h2{
+    font-size:15px;
+    margin:0;
+    padding:18px 20px 14px;
+    color:var(--ink-soft);
+    font-weight:600;
+    border-bottom:1px solid var(--line);
+  }
+  table{width:100%; border-collapse:collapse;}
+  thead th{
+    text-align:left;
+    font-size:11px;
+    color:var(--ink-soft);
+    font-weight:500;
+    padding:10px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:13px 20px;
+    font-size:14px;
+    border-bottom:1px solid var(--line);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  td.amount{
+    font-family:'Source Serif 4',serif;
+    font-weight:600;
+    text-align:right;
+    white-space:nowrap;
+  }
+  td.amount.income{color:var(--income);}
+  td.amount.expense{color:var(--expense);}
+  td.category{color:var(--ink-soft); font-size:13px;}
+  td.del{text-align:right;}
+  .del-btn{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:13px;
+    padding:4px 8px;
+  }
+  .del-btn:hover{color:var(--expense);}
+  .empty-row td{
+    text-align:center;
+    color:var(--ink-soft);
+    padding:36px 20px;
+    font-size:14px;
+  }
+
+  @media (max-width:680px){
+    .totals{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr 1fr;}
+    .form-row .toggle-type{grid-column:1 / -1;}
+    .form-row .add-btn{grid-column:1 / -1;}
+    thead{display:none;}
+    tbody td{display:block; padding:6px 20px;}
+    tbody tr{padding:12px 0; border-bottom:1px solid var(--line); display:block;}
+    tbody tr td{border-bottom:none;}
+    td.amount, td.del{text-align:left;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN VIEW ============ -->
+<div id="login-view">
+  <div class="passbook">
+    <h1>Ledger</h1>
+    <p class="tag">Private budget book — sign in to view entries</p>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="primary-btn">Sign in</button>
+      <div id="login-error"></div>
+    </form>
+
+    <div class="note">
+      Accounts are created by the ledger owner, not here. If you don't have
+      access, ask whoever set this up to add your email in the Firebase console.
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP VIEW ============ -->
+<div id="app-view">
+  <div class="topbar">
+    <div>
+      <h1>Ledger</h1>
+      <div class="who" id="who"></div>
+    </div>
+    <button class="signout" id="signout-btn">Sign out</button>
+  </div>
+
+  <div class="wrap">
+    <div class="totals">
+      <div class="total-card balance">
+        <div class="label">Balance</div>
+        <div class="amount" id="total-balance">$0.00</div>
+      </div>
+      <div class="total-card income">
+        <div class="label">Income</div>
+        <div class="amount" id="total-income">$0.00</div>
+      </div>
+      <div class="total-card expense">
+        <div class="label">Expenses</div>
+        <div class="amount" id="total-expense">$0.00</div>
+      </div>
+    </div>
+
+    <div class="entry-form">
+      <h2>Add an entry</h2>
+      <form id="entry-form">
+        <div class="form-row">
+          <div class="field">
+            <label>Type</label>
+            <div class="toggle-type">
+              <button type="button" data-type="income" class="active">Income</button>
+              <button type="button" data-type="expense">Expense</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" step="0.01" min="0" required>
+          </div>
+          <div class="field">
+            <label for="category">Category</label>
+            <input type="text" id="category" placeholder="Groceries" required>
+          </div>
+          <div class="field">
+            <label for="note">Note</label>
+            <input type="text" id="note" placeholder="Optional">
+          </div>
+          <button type="submit" class="add-btn">Add</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="ledger">
+      <h2>Entries</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Added by</th>
+            <th style="text-align:right;">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="entries-body">
+          <tr class="empty-row"><td colspan="6">No entries yet — add your first one above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FIREBASE ============ -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+  // ---- Fill this in with your own Firebase project's config ----
+  // Firebase console → Project settings → General → Your apps → SDK setup and config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const loginView = document.getElementById('login-view');
+  const appView = document.getElementById('app-view');
+  const loginForm = document.getElementById('login-form');
+  const loginError = document.getElementById('login-error');
+  const whoEl = document.getElementById('who');
+  const entriesBody = document.getElementById('entries-body');
+
+  let currentType = 'income';
+  let unsubscribe = null;
+
+  // ---- Auth state ----
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginView.style.display = 'none';
+      appView.style.display = 'block';
+      whoEl.textContent = 'Signed in as ' + user.email;
+      listenToEntries();
+    } else {
+      appView.style.display = 'none';
+      loginView.style.display = 'flex';
+      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    }
+  });
+
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    loginError.textContent = '';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => { loginError.textContent = friendlyAuthError(err); });
+  });
+
+  document.getElementById('signout-btn').addEventListener('click', () => auth.signOut());
+
+  function friendlyAuthError(err) {
+    switch (err.code) {
+      case 'auth/invalid-email': return 'That email address looks off.';
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential': return 'Email or password is incorrect.';
+      case 'auth/too-many-requests': return 'Too many attempts — try again shortly.';
+      default: return 'Couldn\'t sign in — please try again.';
+    }
+  }
+
+  // ---- Entry type toggle ----
+  document.querySelectorAll('.toggle-type button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-type button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentType = btn.dataset.type;
+    });
+  });
+
+  // ---- Add entry ----
+  document.getElementById('entry-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const amount = parseFloat(document.getElementById('amount').value);
+    const category = document.getElementById('category').value.trim();
+    const note = document.getElementById('note').value.trim();
+    if (!amount || amount <= 0 || !category) return;
+
+    db.collection('transactions').add({
+      type: currentType,
+      amount: amount,
+      category: category,
+      note: note,
+      createdBy: user.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      document.getElementById('entry-form').reset();
+    }).catch(err => {
+      alert('Could not save entry: ' + err.message);
+    });
+  });
+
+  // ---- Live entries + totals ----
+  function listenToEntries() {
+    unsubscribe = db.collection('transactions')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snapshot => {
+        let income = 0, expense = 0;
+        const rows = [];
+
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          if (d.type === 'income') income += d.amount; else expense += d.amount;
+          rows.push(renderRow(doc.id, d));
+        });
+
+        entriesBody.innerHTML = rows.length
+          ? rows.join('')
+          : '<tr class="empty-row"><td colspan="6">No entries yet — add your first one above.</td></tr>';
+
+        document.getElementById('total-income').textContent = fmt(income);
+        document.getElementById('total-expense').textContent = fmt(expense);
+        document.getElementById('total-balance').textContent = fmt(income - expense);
+
+        entriesBody.querySelectorAll('.del-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (confirm('Delete this entry?')) {
+              db.collection('transactions').doc(btn.dataset.id).delete();
+            }
+          });
+        });
+      }, err => {
+        entriesBody.innerHTML = '<tr class="empty-row"><td colspan="6">Could not load entries: ' + err.message + '</td></tr>';
+      });
+  }
+
+  function renderRow(id, d) {
+    const date = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date();
+    const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const sign = d.type === 'income' ? '+' : '−';
+    return `<tr>
+      <td>${dateStr}</td>
+      <td class="category">${escapeHtml(d.category || '')}</td>
+      <td>${escapeHtml(d.note || '')}</td>
+      <td class="category">${escapeHtml(d.createdBy || '')}</td>
+      <td class="amount ${d.type}">${sign}${fmt(d.amount).replace('$','$')}</td>
+      <td class="del"><button class="del-btn" data-id="${id}">Delete</button></td>
+    </tr>`;
+  }
+
+  function fmt(n) {
+    return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
